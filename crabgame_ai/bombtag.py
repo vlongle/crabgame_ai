@@ -15,7 +15,8 @@ class BombTagActions(IntEnum):
     TURN_RIGHT = 2
     STAY_STILL = 3
     JUMP = 4
-    HAND_BOMB = 5
+    HAND_BOMB = 5  # only has affect if you is carrying a bomb and the cell that you're facing
+    # has the opponent.
 
 
 class BombTagPlayerTypes(IntEnum):
@@ -35,7 +36,7 @@ class Direction(IntEnum):
 class Player:
     """A class that defines a player in the game.
     TODO: Implement the player class. Necessary attributes might
-    include my current position ect...
+    include my current position, the player speed ect...
 
     NOTE: Position is  (x, y, direction) where direction is one of the Direction IntEnum
 
