@@ -2,31 +2,43 @@
 NOTE: Assume the map is fixed right now so we don't have to
 handle the image embedding of the map.
 """
-import gym
-from enum import Enum
+from enum import IntEnum
 from typing import Sequence
 
+import gym
 
-class BombTagActions(Enum):
+
+class BombTagActions(IntEnum):
     """A class that defines the available actions that can be taken in the game."""
-    MOVE_LEFT = 0
-    MOVE_RIGHT = 1
-    MOVE_UP = 2
-    MOVE_DOWN = 3
+    MOVE_FORWARD = 0
+    TURN_LEFT = 1
+    TURN_RIGHT = 2
+    STAY_STILL = 3
     JUMP = 4
     HAND_BOMB = 5
 
 
-class BombTagPlayerTypes(Enum):
+class BombTagPlayerTypes(IntEnum):
     """ A class that defines the available player types in the game."""
     SEEKER = 0
     HIDER = 1
+
+
+class Direction(IntEnum):
+    """A class that defines the available directions in the game."""
+    NORTH = 0
+    EAST = 1
+    SOUTH = 2
+    WEST = 3
 
 
 class Player:
     """A class that defines a player in the game.
     TODO: Implement the player class. Necessary attributes might
     include my current position ect...
+
+    NOTE: Position is  (x, y, direction) where direction is one of the Direction IntEnum
+
     """
 
     def __init__(self, player_type: BombTagPlayerTypes, player_id: int):
