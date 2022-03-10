@@ -47,8 +47,25 @@ class Player:
         self.player_id = player_id
         if player_type == BombTagPlayerTypes.HIDER:
             self.position = (0, 0, Direction.EAST)
+            self.has_bomb = False
+        else:
+            self.position = (7, 7, Direction.NORTH)     # gym.width, gym.height for initial x, y? -EL
+            self.has_bomb = True
+
+    def reset_player(self):
+        """
+        resets player's position
+        gives bomb back to original seeker
+        """
+        if self.player_type == BombTagPlayerTypes.HIDER:
+            self.position = (0, 0, Direction.EAST)
+            self.has_bomb = False
         else:
             self.position = (7, 7, Direction.NORTH)
+            self.has_bomb = True
+
+        # will hider/seeker roles change during the game depending on who has the bomb? -EL
+
 
 
 class BombTagObservation:
@@ -66,7 +83,10 @@ class BombTagEnv(gym.Env):
     the OpenAI Gym interface."""
 
     def __init__(self, explode_time: int = 100):
+        self.init_explode_time = explode_time
         self.explode_time = explode_time
+        self.seeker = Player(BombTagPlayerTypes.SEEKER, 0)
+        self.hider = Player(BombTagPlayerTypes.HIDER, 1)
 
     def reset(self):
         """Reset the environment to its initial state.
@@ -74,7 +94,9 @@ class BombTagEnv(gym.Env):
         explode_time of the bomb.
         TODO: Implement this method.
         """
-        pass
+        self.explode_time = self.init_explode_time
+        self.seeker.reset_player()
+        self.hider.reset_player()
 
     def step(self, actions: Sequence[BombTagActions]):
         """Run one timestep of the environment's dynamics.
