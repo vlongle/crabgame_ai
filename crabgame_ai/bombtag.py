@@ -45,6 +45,10 @@ class Player:
     def __init__(self, player_type: BombTagPlayerTypes, player_id: int):
         self.player_type = player_type
         self.player_id = player_id
+        if player_type == BombTagPlayerTypes.HIDER:
+            self.position = (0, 0, Direction.EAST)
+        else:
+            self.position = (7, 7, Direction.NORTH)
 
 
 class BombTagObservation:
