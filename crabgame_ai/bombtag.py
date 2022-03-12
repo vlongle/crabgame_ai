@@ -46,10 +46,16 @@ class Player:
         self.player_type = player_type
         self.player_id = player_id
         if player_type == BombTagPlayerTypes.HIDER:
-            self.position = (0, 0, Direction.EAST)
+            # self.position = (0, 0, Direction.EAST)
+            self.x = 0
+            self.y = 0
+            self.direction = Direction.EAST
             self.has_bomb = False
         else:
-            self.position = (7, 7, Direction.NORTH)     # gym.width, gym.height for initial x, y? -EL
+            # self.position = (7, 7, Direction.NORTH)     # gym.width, gym.height for initial x, y? -EL
+            self.x = 7
+            self.y = 7
+            self.direction = Direction.NORTH
             self.has_bomb = True
 
     def reset_player(self):
@@ -58,10 +64,16 @@ class Player:
         gives bomb back to original seeker
         """
         if self.player_type == BombTagPlayerTypes.HIDER:
-            self.position = (0, 0, Direction.EAST)
+            # self.position = (0, 0, Direction.EAST)
+            self.x = 0
+            self.y = 0
+            self.direction = Direction.EAST
             self.has_bomb = False
         else:
-            self.position = (7, 7, Direction.NORTH)
+            # self.position = (7, 7, Direction.NORTH)
+            self.x = 7
+            self.y = 7
+            self.direction = Direction.NORTH
             self.has_bomb = True
 
         # will hider/seeker roles change during the game depending on who has the bomb? -EL
@@ -110,6 +122,14 @@ class BombTagEnv(gym.Env):
 
         TODO: implement this method.
         """
+        # for action in actions:
+        #     match action:
+        #         case BombTagActions.MOVE_FORWARD:
+        #             # check which direction, make sure not running into a wall, then move in the correct direction
+        #             # wait how does player even work ????????
+        #         case _:
+        #             print('unknown')
+
         pass
 
     def render(self, mode='human'):
