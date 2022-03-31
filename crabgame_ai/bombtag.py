@@ -85,7 +85,7 @@ class Player:
         self.direction = (self.direction + 1) % 4 # int or direction enum? does it matter?
 
     def hand_bomb(self):
-        if self.has_bomb:
+        if self.has_bomb: # also check if cell facing contains opponent
             self.has_bomb = 0
             return True # let step know bomb successfully handed over
         else:
