@@ -42,41 +42,54 @@ class Player:
 
     """
 
-    def __init__(self, player_type: BombTagPlayerTypes, player_id: int):
+    def __init__(self, player_type: BombTagPlayerTypes, player_id: int, init_location: tuple):
         self.player_type = player_type
         self.player_id = player_id
-        if player_type == BombTagPlayerTypes.HIDER:
-            # self.position = (0, 0, Direction.EAST)
-            self.x = 0
-            self.y = 0
-            self.direction = Direction.EAST
-            self.has_bomb = False
-        else:
-            # self.position = (7, 7, Direction.NORTH)     # gym.width, gym.height for initial x, y? -EL
-            self.x = 7
-            self.y = 7
-            self.direction = Direction.NORTH
+        if player_type == BombTagPlayerTypes.SEEKER:
             self.has_bomb = True
+        else:
+            self.has_bomb = False
+        self.x = init_location[0]
+        self.y = init_location[1]
+        self.direction = init_location[2]
+        self.init_loc = init_location # save initial location for reset
 
     def reset_player(self):
         """
         resets player's position
-        gives bomb back to original seeker
+        gives bomb back to original seeker??
         """
-        if self.player_type == BombTagPlayerTypes.HIDER:
-            # self.position = (0, 0, Direction.EAST)
-            self.x = 0
-            self.y = 0
-            self.direction = Direction.EAST
-            self.has_bomb = False
-        else:
-            # self.position = (7, 7, Direction.NORTH)
-            self.x = 7
-            self.y = 7
-            self.direction = Direction.NORTH
-            self.has_bomb = True
+        self.x = self.init_loc[0]
+        self.y = self.init_loc[1]
+        self.direction = self.init_loc[2]
 
-        # will hider/seeker roles change during the game depending on who has the bomb? -EL
+    def move_forward(self):
+        match self.direction:
+            case 0:
+                if self.y > 0:
+                    self.y -= 1
+            case 1:
+                if self.x < width: # how are we defining map width?
+                    self.x += 1
+            case 2:
+                if self.y < height:
+                    self.y += 1
+            case 3:
+                if self.x > 0:
+                    self.x -= 1
+
+    def turn_left(self):
+        self.direction = (self.direction - 1) % 4
+
+    def turn_right(self):
+        self.direction = (self.direction + 1) % 4 # int or direction enum? does it matter?
+
+    def hand_bomb(self):
+        if self.has_bomb:
+            self.has_bomb = 0
+            return True # let step know bomb successfully handed over
+        else:
+            return False
 
 
 
@@ -94,11 +107,16 @@ class BombTagEnv(gym.Env):
     """A class that defines the 2-player BombTag game that follows
     the OpenAI Gym interface."""
 
-    def __init__(self, explode_time: int = 100):
+    def __init__(self, init_locations: list, explode_time: int = 100):
         self.init_explode_time = explode_time
         self.explode_time = explode_time
-        self.seeker = Player(BombTagPlayerTypes.SEEKER, 0)
-        self.hider = Player(BombTagPlayerTypes.HIDER, 1)
+        # self.players = []
+        # for i in range(2):
+        #     player = Player(BombTagPlayerTypes(i), i, init_locations[i])
+        #     self.players.append(player)
+        self.player1 = Player(BombTagPlayerTypes.SEEKER, 0, init_locations[0])
+        self.player2 = Player(BombTagPlayerTypes.HIDER, 1, init_locations[1])
+        self.players = [self.player1, self.player2]
 
     def reset(self):
         """Reset the environment to its initial state.
@@ -107,8 +125,10 @@ class BombTagEnv(gym.Env):
         TODO: Implement this method.
         """
         self.explode_time = self.init_explode_time
-        self.seeker.reset_player()
-        self.hider.reset_player()
+        for p in self.players:
+            p.reset_player()
+        # self.player1.reset_player()
+        # self.player2.reset_player()
 
     def step(self, actions: Sequence[BombTagActions]):
         """Run one timestep of the environment's dynamics.
@@ -122,15 +142,18 @@ class BombTagEnv(gym.Env):
 
         TODO: implement this method.
         """
-        # for action in actions:
-        #     match action:
-        #         case BombTagActions.MOVE_FORWARD:
-        #             # check which direction, make sure not running into a wall, then move in the correct direction
-        #             # wait how does player even work ????????
-        #         case _:
-        #             print('unknown')
+        for action in actions:
+            match action:
+                case BombTagActions.MOVE_FORWARD:
+                    # calling step() per player, or all players execute same action?
+                case BombTagActions.TURN_LEFT:
+                case BombTagActions.TURN_RIGHT:
+                case BombTagActions.STAY_STILL:
+                case BombTagActions.JUMP:
+                case BombTagActions.HAND_BOMB:
+                case _:
+                    print('unknown action')
 
-        pass
 
     def render(self, mode='human'):
         """Render the environment. (use matplotlib.pyplot or cv2)
