@@ -6,6 +6,19 @@ from enum import IntEnum
 from typing import Sequence
 
 import gym
+import numpy as np
+
+game_map = np.array([[0,0,0,0,1,1,1,1],
+                [0,0,0,0,1,1,1,1],
+                [0,0,0,0,0,0,2,1],
+                [0,0,0,0,0,0,0,1],
+                [0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0]])
+# seeker, hider
+start_locs = [(7,7,3),(0,0,1)]
+
 
 
 class BombTagActions(IntEnum):
@@ -31,6 +44,14 @@ class Direction(IntEnum):
     EAST = 1
     SOUTH = 2
     WEST = 3
+
+class CellType(IntEnum):
+    """A class that defines the available directions in the game."""
+    GROUND = 0
+    PLATFORM = 1
+    STAIRCASE = 2
+    SEEKER = 3
+    HIDER = 4
 
 
 class Player:
@@ -63,20 +84,20 @@ class Player:
         self.y = self.init_loc[1]
         self.direction = self.init_loc[2]
 
-    def move_forward(self):
-        match self.direction:
-            case 0:
-                if self.y > 0:
-                    self.y -= 1
-            case 1:
-                if self.x < width: # how are we defining map width?
-                    self.x += 1
-            case 2:
-                if self.y < height:
-                    self.y += 1
-            case 3:
-                if self.x > 0:
-                    self.x -= 1
+    # def move_forward(self):
+    #     match self.direction:
+    #         case 0:
+    #             if self.y > 0:
+    #                 self.y -= 1
+    #         case 1:
+    #             if self.x < width: # how are we defining map width?
+    #                 self.x += 1
+    #         case 2:
+    #             if self.y < height:
+    #                 self.y += 1
+    #         case 3:
+    #             if self.x > 0:
+    #                 self.x -= 1
 
     def turn_left(self):
         self.direction = (self.direction - 1) % 4
@@ -100,22 +121,45 @@ class BombTagObservation:
     - The current position of the seeker and hider
     - The remaining explode time of the bomb
     """
-    pass
+    def __init__(self, cur_env: np.ndarray, time: int):
+        self.remaining_time = time
+        self.seeker_pos = np.where(cur_env == BombTagPlayerTypes.SEEKER)
+        self.hider_pos = np.where(cur_env == BombTagPlayerTypes.HIDER)
+
+
+def forward_cell(player: Player):
+    x = player.x
+    y = player.y
+    match player.direction:
+        case 0:
+                y -= 1
+        case 1:
+                x += 1
+        case 2:
+                y += 1
+        case 3:
+                x -= 1
+    return x, y
 
 
 class BombTagEnv(gym.Env):
     """A class that defines the 2-player BombTag game that follows
     the OpenAI Gym interface."""
 
-    def __init__(self, init_locations: list, explode_time: int = 100):
+    def __init__(self, env_map: np.ndarray, init_locations: list, explode_time: int = 100):
         self.init_explode_time = explode_time
         self.explode_time = explode_time
+        self.init_env = env_map
+        self.grid = env_map
+        self.map_height, self.map_width = env_map.shape
         # self.players = []
         # for i in range(2):
         #     player = Player(BombTagPlayerTypes(i), i, init_locations[i])
         #     self.players.append(player)
         self.player1 = Player(BombTagPlayerTypes.SEEKER, 0, init_locations[0])
+        self.grid[init_locations[0][0], init_locations[0][1]] = CellType.SEEKER
         self.player2 = Player(BombTagPlayerTypes.HIDER, 1, init_locations[1])
+        self.grid[init_locations[1][0], init_locations[1][1]] = CellType.HIDER
         self.players = [self.player1, self.player2]
 
     def reset(self):
@@ -131,6 +175,7 @@ class BombTagEnv(gym.Env):
         # self.player2.reset_player()
 
     def step(self, actions: Sequence[BombTagActions]):
+        # [actp1, actp2]
         """Run one timestep of the environment's dynamics.
         Args:
             actions: a list of action taken, each per player.
@@ -142,18 +187,50 @@ class BombTagEnv(gym.Env):
 
         TODO: implement this method.
         """
-        for action in actions:
-            match action:
+        rewards = []
+        done = self.explode_time <= 0
+        if done:
+            return BombTagObservation(self.grid, self.explode_time), rewards, done
+
+        # action index in array corresponds to each player id
+        for i in range(len(actions)):
+        # for action in actions:
+            player = self.players[i]
+            x = player.x
+            y = player.y
+            direction = player.direction
+            f_x, f_y = forward_cell(player)
+            match actions[i]:
                 case BombTagActions.MOVE_FORWARD:
-                    # calling step() per player, or all players execute same action?
+                    # cant if facing wall
+                    # cant if ground and facing platform
+                    if 0 < f_x < self.map_width and 0 < f_y < self.map_height \
+                            and not(self.grid[x, y] == 0 and self.grid[f_x, f_y] == 1):
+                        # overlapping players?
+                        player.x = f_x
+                        player.y = f_y
+                        self.grid[x, y] = self.init_env[x, y]
+                        self.grid[f_x, f_y] = CellType(player.player_type + 3)
                 case BombTagActions.TURN_LEFT:
+                    player.turn_left()
                 case BombTagActions.TURN_RIGHT:
+                    player.turn_right()
                 case BombTagActions.STAY_STILL:
+                    # do nothing
                 case BombTagActions.JUMP:
+                    # if facing platform, move forward
                 case BombTagActions.HAND_BOMB:
+                    if player.has_bomb and \
+                            (0 < f_x < self.map_width and 0 < f_y < self.map_height) \
+                            and self.grid[f_x, f_y] == CellType.HIDER:
+                        player.has_bomb = False
+                        # set receiving player has_bomb = True, but need to know handed bomb to who
+                    # player.hand_bomb()
                 case _:
                     print('unknown action')
+        self.explode_time -= 1
 
+        return BombTagObservation(self.grid, self.explode_time), rewards, done
 
     def render(self, mode='human'):
         """Render the environment. (use matplotlib.pyplot or cv2)
