@@ -7,6 +7,7 @@ from typing import Sequence
 
 import gym
 import numpy as np
+import matplotlib as plt
 
 # example map
 game_map = np.array([[0, 0, 0, 0, 1, 1, 1, 1],
@@ -128,8 +129,8 @@ class BombTagEnv(gym.Env):
     def __init__(self, env_map: np.ndarray, init_locations: list, explode_time: int = 100):
         self.init_explode_time = explode_time  # save for reset
         self.explode_time = explode_time
-        self.init_env = env_map  # basic environment map w/o player locations
-        self.cur_env = env_map  # game map w/ player locations
+        self.init_env = env_map.copy()  # basic environment map w/o player locations
+        self.cur_env = env_map.copy()  # game map w/ player locations
         self.map_height, self.map_width = env_map.shape
         # self.players = []
         # for i in range(2):
@@ -198,7 +199,7 @@ class BombTagEnv(gym.Env):
             match actions[i]:
                 case BombTagActions.MOVE_FORWARD:
                     # cant if facing wall
-                    if 0 < f_x < self.map_width and 0 < f_y < self.map_height:
+                    if 0 <= f_x < self.map_width and 0 <= f_y < self.map_height:
                         # other than if facing stairs, must be same tile type
                         if self.init_env[x, y] == self.cur_env[f_x, f_y] or self.cur_env[f_x, f_y] == CellType.STAIRCASE:
                             player.x = f_x
@@ -219,7 +220,7 @@ class BombTagEnv(gym.Env):
                     continue
                 case BombTagActions.JUMP:
                     # if facing opposite level, move forward
-                    if 0 < f_x < self.map_width and 0 < f_y < self.map_height:
+                    if 0 <= f_x < self.map_width and 0 <= f_y < self.map_height:
                         if (self.init_env[x, y] == CellType.PLATFORM and self.init_env[f_x, f_y] == CellType.GROUND) \
                                 or (self.init_env[x, y] == CellType.GROUND and self.init_env[f_x, f_y] == CellType.PLATFORM):
                             player.x = f_x
@@ -228,7 +229,7 @@ class BombTagEnv(gym.Env):
                             self.cur_env[f_x, f_y] = CellType(player.player_type + 3)
                 case BombTagActions.HAND_BOMB:
                     if player.has_bomb and \
-                            (0 < f_x < self.map_width and 0 < f_y < self.map_height) \
+                            (0 <= f_x < self.map_width and 0 <= f_y < self.map_height) \
                             and self.cur_env[f_x, f_y] == CellType.HIDER:
                         player.has_bomb = False
                         player.player_type = BombTagPlayerTypes.HIDER
@@ -247,4 +248,17 @@ class BombTagEnv(gym.Env):
         """Render the environment. (use matplotlib.pyplot or cv2)
         TODO: implement this method.
         """
-        pass
+        N = 8
+        fig, ax = plt.pyplot.subplots(1, 1, tight_layout=True)
+        # make color map
+        my_cmap = plt.colors.ListedColormap(['w', 'r', 'g', 'b', 'y'])
+        # set the 'bad' values (nan) to be white and transparent
+        my_cmap.set_bad(color='w', alpha=0)
+        # draw the grid
+        for x in range(N + 1):
+            ax.axhline(x, lw=2, color='k', zorder=5)
+            ax.axvline(x, lw=2, color='k', zorder=5)
+        # draw the boxes
+        ax.imshow(self.cur_env, interpolation='none', cmap=my_cmap, extent=[0, N, 0, N], zorder=0)
+        # turn off the axis labels
+        ax.axis('off')
